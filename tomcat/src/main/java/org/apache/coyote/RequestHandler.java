@@ -21,7 +21,6 @@ public class RequestHandler {
         final String path = httpRequest.getPath();
         final String[] paths = path.split(PATH_DELIMITER);
 
-        System.out.println(path);
         if (paths.length == 0) {
             return handleRoot();
         }

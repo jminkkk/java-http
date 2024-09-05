@@ -37,11 +37,13 @@ public class Http11Processor implements Runnable, Processor {
         try (final InputStream inputStream = connection.getInputStream();
              final BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
              final OutputStream outputStream = connection.getOutputStream()) {
-
+            log.info("요청 시작");
             final HttpRequest httpRequest = HttpRequestParser.parseRequest(bufferedReader);
+            log.info("요청 파싱 완료 {}", httpRequest.getPath());
+
             final RequestHandler requestHandler = new RequestHandler();
             final String response = requestHandler.handle(httpRequest);
-
+            log.info("response = {}", response);
             outputStream.write(response.getBytes());
             outputStream.flush();
         } catch (IOException | UncheckedServletException e) {
