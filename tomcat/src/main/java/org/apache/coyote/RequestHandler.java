@@ -2,14 +2,11 @@ package org.apache.coyote;
 
 import java.io.IOException;
 import java.net.URL;
-import java.net.http.HttpRequest;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.techcourse.db.InMemoryUserRepository;
 import com.techcourse.model.User;
@@ -18,13 +15,13 @@ public class RequestHandler {
     private static final Set<String> STATIC_RESOURCE_EXTENSIONS = Set.of("css", "js");
     private static final String STATIC_RESOURCE_ROOT_PATH = "static/";
     private static final String PATH_DELIMITER = "/";
-    private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
     // mapping handler method
     public String handle(final HttpRequest httpRequest) throws IOException {
-        final String endPoint = httpRequest.uri().getPath();
-        final String[] paths = endPoint.split(PATH_DELIMITER);
+        final String path = httpRequest.getPath();
+        final String[] paths = path.split(PATH_DELIMITER);
 
+        System.out.println(path);
         if (paths.length == 0) {
             return handleRoot();
         }
@@ -53,35 +50,55 @@ public class RequestHandler {
 
     // TOOD: change naming
     private String handleURL(final HttpRequest httpRequest) throws IOException {
-        String uri = httpRequest.uri().getPath();
+        final String uri = httpRequest.getUrl();
         if (uri.contains("login")) {
-            return handleLogin(httpRequest);
+            return processLoginRequest(httpRequest);
+        }
+
+        if (uri.contains("register")) {
+            return processRegisterRequest(httpRequest);
         }
 
         throw new IllegalCallerException("유효하지 않은 기능입니다.");
     }
 
-    private String handleLogin(final HttpRequest httpRequest) throws IOException {
-        String query = httpRequest.uri().getQuery();
+    private String processLoginRequest(final HttpRequest httpRequest) throws IOException {
+        final String query = httpRequest.getPath().split("\\?")[1];
         if (query == null) {
             return handleSimpleResource("login.html");
         }
 
-        String[] params = query.split("&");
-        String account = params[0].split("=")[1];
-        String password = params[1].split("=")[1];
+        final String[] params = query.split("&");
+        final String account = params[0].split("=")[1];
+        final String password = params[1].split("=")[1];
 
-        Optional<User> userOptional = InMemoryUserRepository.findByAccount(account);
+        final Optional<User> userOptional = InMemoryUserRepository.findByAccount(account);
         if (userOptional.isEmpty()) {
             return handleSimpleResource("login.html");
         }
 
-        User user = userOptional.get();
+        final User user = userOptional.get();
         if (user.checkPassword(password)) {
             return HttpResponseGenerator.getFoundResponse("http://localhost:8080/index.html");
         }
 
         return handleSimpleResource("401.html");
+    }
+
+    private String processRegisterRequest(final HttpRequest httpRequest) throws IOException {
+        if (Objects.equals(httpRequest.getMethod(), "GET")) {
+            return handleSimpleResource("register.html");
+        }
+
+        if (Objects.equals(httpRequest.getMethod(), "POST")) {
+            return processRegisterPostRequest(httpRequest);
+        }
+
+        return handleSimpleResource("401.html");
+    }
+
+    private String processRegisterPostRequest(final HttpRequest httpRequest) {
+        return "string";
     }
 
     private String findResourcePath(final String resourcePath) {
